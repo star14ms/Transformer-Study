@@ -162,6 +162,6 @@ cython_debug/
 model_viz/**/*
 torchview_custom/**/*
 
-data/**/*
+data/MNIST/raw/
 lightning_logs/**/*
 *.pth
