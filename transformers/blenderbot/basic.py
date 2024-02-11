@@ -1,7 +1,7 @@
 from transformers import BlenderbotTokenizer, BlenderbotForConditionalGeneration
 
 # Load the model and tokenizer
-model_name = 'facebook/blenderbot-3B'
+model_name = 'facebook/blenderbot-3B' # 'facebook/blenderbot-400M-distill'
 model = BlenderbotForConditionalGeneration.from_pretrained(model_name)
 tokenizer = BlenderbotTokenizer.from_pretrained(model_name)
 
