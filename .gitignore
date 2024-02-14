@@ -159,9 +159,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-model_viz/**/*
-torchview_custom/**/*
+model_viz/
+torchview_custom/
 
 data/MNIST/raw/
-lightning_logs/**/*
+lightning_logs/
 *.pth
