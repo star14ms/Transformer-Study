@@ -2,13 +2,14 @@ import pytorch_lightning as pl
 import torch
 from torch import nn
 from torch.nn.functional import one_hot
-from model import TransformerEncoder, Transformer
+from model import AdditionTransformerEncoder, AdditionTransformer
+from data.addition import tokenizer, vocab
 
 
-class TransformerEncoderL(pl.LightningModule):
-    def __init__(self, vocab_size, d_model, nhead, num_layers, dim_feedforward, batch_first, *args, **kwargs):
+class AdditionTransformerEncoderL(pl.LightningModule):
+    def __init__(self, vocab_size=len(vocab), d_model=32, nhead=8, num_layers=1, dim_feedforward=32, batch_first=True, *args, **kwargs):
         super().__init__()
-        self.model = TransformerEncoder(vocab_size=vocab_size, d_model=d_model, nhead=nhead, num_layers=num_layers, dim_feedforward=dim_feedforward, batch_first=batch_first)
+        self.model = AdditionTransformerEncoder(vocab_size=vocab_size, d_model=d_model, nhead=nhead, num_layers=num_layers, dim_feedforward=dim_feedforward, batch_first=batch_first)
         self.criterion = nn.CrossEntropyLoss()
         self.save_hyperparameters()
 
@@ -28,15 +29,15 @@ class TransformerEncoderL(pl.LightningModule):
         return optimizer
 
 
-class TransformerL(pl.LightningModule):
-    def __init__(self, vocab_size, d_model, nhead, num_encoder_layers, num_decoder_layers, dim_feedforward, batch_first, PAD_ID, *args, **kwargs):
+class AdditionTransformerL(pl.LightningModule):
+    def __init__(self, vocab_size=len(vocab), d_model=32, nhead=8, num_encoder_layers=1, num_decoder_layers=1, dim_feedforward=32, batch_first=32, *args, **kwargs):
         super().__init__()
-        self.model = Transformer(vocab_size=vocab_size, d_model=d_model, nhead=nhead, num_encoder_layers=num_encoder_layers, num_decoder_layers=num_decoder_layers, dim_feedforward=dim_feedforward, batch_first=batch_first)
+        self.model = AdditionTransformer(vocab_size=vocab_size, d_model=d_model, nhead=nhead, num_encoder_layers=num_encoder_layers, num_decoder_layers=num_decoder_layers, dim_feedforward=dim_feedforward, batch_first=batch_first)
         self.criterion = nn.CrossEntropyLoss()
         self.save_hyperparameters()
 
         self.vocab_size = vocab_size
-        self.PAD_ID = PAD_ID
+        self.PAD_ID = tokenizer.token_to_id('[PAD]')
 
         # self.src_mask = nn.Transformer.generate_square_subsequent_mask(7)
         self.tgt_mask = nn.Transformer.generate_square_subsequent_mask(5)

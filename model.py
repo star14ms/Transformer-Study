@@ -21,26 +21,11 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:, :x.shape[1]]
 
         return self.dropout(x)
-
-
-class TransformerDecoder(nn.Module):
-    def __init__(self):
-        super(TransformerDecoder, self).__init__()
-
-        self.decoderlayer = nn.TransformerDecoderLayer(d_model=512, nhead=8)
-        self.decoder = nn.TransformerDecoder(self.decoderlayer, num_layers=2, norm=nn.LayerNorm(512))
-        self.ffn = nn.Linear(512, 10)
-
-    def forward(self, x):
-        x = self.decoder(x)
-        x = self.ffn(x)
-
-        return x
     
 
-class TransformerEncoder_forMNIST(nn.Module):
+class MNISTTransformerEncoder(nn.Module):
     def __init__(self, d_model=512, nhead=8, num_layers=2, num_classes=10):
-        super(TransformerEncoder, self).__init__()
+        super().__init__()
 
         self.conv1 = nn.Conv2d(1, 16, 3, 1)
         self.conv2 = nn.Conv2d(16, 32, 3, 1)
@@ -59,9 +44,9 @@ class TransformerEncoder_forMNIST(nn.Module):
         return x.view(x.shape[0], -1)
     
 
-class Transformer(nn.Module):
+class AdditionTransformer(nn.Module):
     def __init__(self, vocab_size, d_model=512, nhead=8, num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=2048, batch_first=False):
-        super(Transformer, self).__init__()
+        super().__init__()
         self.pos_encoding = PositionalEncoding(d_model, max_len=7)
         self.pos_encoding_tgt = PositionalEncoding(d_model, max_len=5)
         self.embbeding = nn.Embedding(vocab_size, d_model)
@@ -80,7 +65,7 @@ class Transformer(nn.Module):
         return x
 
 
-class TransformerEncoder(nn.Module):
+class AdditionTransformerEncoder(nn.Module):
     def __init__(self, vocab_size, d_model=512, nhead=8, num_layers=6, dim_feedforward=2048, batch_first=False):
         super().__init__()
         self.pos_encoding = PositionalEncoding(d_model, max_len=7)
@@ -105,7 +90,7 @@ class TransformerEncoder(nn.Module):
         return h
     
 
-class LinearEncoder(nn.Module):
+class AdditionLinearEncoder(nn.Module):
     def __init__(self, vocab_size, d_model=512):
         super().__init__()
         self.embbeding = nn.Embedding(vocab_size, d_model)
