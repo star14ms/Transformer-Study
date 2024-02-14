@@ -67,16 +67,19 @@ vocab = tokenizer.get_vocab()
 
 
 if __name__ == '__main__':
-    label_type = 'int'
-    dataloader = AdditionDataModule.train_dataloader(label_type=label_type)
+    label_type = 'string'
+    datamodule = AdditionDataModule(batch_size=1, label_type=label_type)
+    dataloader = datamodule.train_dataloader()
 
     for i, data in enumerate(dataloader):
-        inputs, labels = data
-        print(inputs.shape, labels.shape)
-        print(tokenizer.decode(inputs[0].tolist()))
-
         if label_type == 'string':
-            print(tokenizer.decode(labels[0].tolist()))
+            inputs, _, labels = data
+            print(inputs.shape, labels.shape)
+            print(tokenizer.decode(inputs[0].tolist()).replace(' ', ''))
+            print(tokenizer.decode(labels[0].tolist()).replace(' ', ''))
         elif label_type == 'int':
+            inputs, labels = data
+            print(inputs.shape, labels.shape)
+            print(tokenizer.decode(inputs[0].tolist()))
             print(labels[0].tolist()[0])
         break

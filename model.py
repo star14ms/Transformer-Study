@@ -106,7 +106,7 @@ class TransformerEncoder(nn.Module):
     
 
 class LinearEncoder(nn.Module):
-    def __init__(self, vocab_size, d_model=512, nhead=8, num_layers=6, dim_feedforward=2048, batch_first=False):
+    def __init__(self, vocab_size, d_model=512):
         super().__init__()
         self.embbeding = nn.Embedding(vocab_size, d_model)
         self.linear = nn.Linear(d_model*7, 64)

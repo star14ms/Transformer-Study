@@ -9,14 +9,14 @@ from rich import print as pprint
 def test():
     for (inputs, _, labels) in dataloader:
         inputs, labels = inputs.to(device), labels.to(device)
-        outputs = torch.tensor(tokenizer.encode('[SOS]').ids * batch_size * 1).view(batch_size, 1).to(device)
+        outputs = torch.tensor([SOS_ID] * batch_size * 1).view(batch_size, 1).to(device)
         decode = lambda x: tokenizer.decode(x.tolist()).replace(' ', '')
 
         while True:
             probs = model(inputs, outputs)
             targets = probs.argmax(dim=2)[:, -1].view(batch_size, 1)
             outputs = torch.cat([outputs, targets], dim=1)
-            if outputs[0, -1].item() == tokenizer.token_to_id('[EOS]') or outputs.shape[1] == MAX_LENGTH:
+            if outputs[0, -1].item() == EOS_ID or outputs.shape[1] == MAX_LENGTH:
                 break
 
         print(decode(inputs[0]))
@@ -25,7 +25,7 @@ def test():
         # label = labels[0].item()
         # output = round(outputs[0].item(), 1)
         pprint(f'[green]{label}[/green]')
-        pprint(f'[yellow]{output}[/yellow]', outputs[1:].tolist())
+        pprint(f'[yellow]{output}[/yellow]')
         # pprint(torch.round(probs[0][:].softmax(dim=1).to('cpu'), decimals=1).tolist())
         # print(f'{abs(label - output):.1f} < difference', )
         input()
@@ -35,6 +35,9 @@ if __name__ == '__main__':
     batch_size = 1
     datamodule = AdditionDataModule(batch_size=batch_size, label_type='string')
     dataloader = datamodule.train_dataloader()
+
+    SOS_ID = tokenizer.token_to_id('[SOS]')
+    EOS_ID = tokenizer.token_to_id('[EOS]')
 
     # model = TransformerEncoderL(
     #     vocab_size=len(vocab),
@@ -55,7 +58,7 @@ if __name__ == '__main__':
         PAD_ID=tokenizer.token_to_id('[PAD]'),
         batch_first=True
     )
-    model.load_state_dict(torch.load('model.pth'))
+    model.load_state_dict(torch.load('models/model.pth'))
     device = get_device()
     model.to(device)
 
