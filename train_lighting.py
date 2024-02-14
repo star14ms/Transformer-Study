@@ -1,24 +1,20 @@
 import torch
-from torch.nn.functional import one_hot
-import math
-
 from pytorch_lightning import Trainer
-from model_lighting import TransformerEncoderL
-from data.addition import vocab, AdditionDataModule
-from device import get_device
+from model_lighting import TransformerEncoderL, TransformerL
+from data.addition import tokenizer, vocab, AdditionDataModule
 
 
-dataloader = AdditionDataModule(batch_size=128)
+dataloader = AdditionDataModule(batch_size=128, label_type='string')
 
-
-# Initialize your model
-model = TransformerEncoderL(
+model = TransformerL(
     vocab_size=len(vocab),
     d_model=32,
     nhead=8,
-    num_layers=1,
+    num_encoder_layers=1,
+    num_decoder_layers=1,
     dim_feedforward=32,
     batch_first=True,
+    PAD_ID=tokenizer.token_to_id('[PAD]'),
 )
 
 # Initialize a trainer
@@ -28,4 +24,4 @@ trainer = Trainer(max_epochs=20, accelerator='mps' if torch.backends.mps.is_avai
 trainer.fit(model, datamodule=dataloader)
 
 # Save the model to disk (optional)
-torch.save(model.state_dict(), 'model0.pth')
+torch.save(model.state_dict(), 'model.pth')

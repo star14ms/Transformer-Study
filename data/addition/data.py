@@ -15,6 +15,8 @@ class AdditionDataset(Dataset):
         self.transform = transform
         self.max_length = max_length
         self.label_type = label_type
+        self.SOS_ID = tokenizer.token_to_id('[SOS]')
+        self.EOS_ID = tokenizer.token_to_id('[EOS]')
 
     def __len__(self):
         return len(self.data)
@@ -27,27 +29,34 @@ class AdditionDataset(Dataset):
         inputs = tokenizer.encode(inputs).ids
         if self.label_type == 'string':
             labels = tokenizer.encode(labels.replace('\n', '')).ids
+            labels_shift = [self.SOS_ID] + labels
+            labels = labels + [self.EOS_ID]
         elif self.label_type == 'int':
             labels = [int(labels.replace('\n', ''))]
 
         if self.transform:
             inputs = self.transform(inputs)
             labels = self.transform(labels)
+            if self.label_type == 'string':
+                labels_shift = self.transform(labels_shift)
 
+        if self.label_type == 'string':
+            return inputs, labels_shift, labels
         return inputs, labels
 
 
 class AdditionDataModule(LightningDataModule):
-    def __init__(self, batch_size=128):
+    def __init__(self, batch_size=128, label_type='string'):
         super().__init__()
         self.batch_size = batch_size
+        self.label_type = label_type
 
-    def train_dataloader(self, label_type='int', num_workers=0):
+    def train_dataloader(self, num_workers=0):
         transform = transforms.Compose([
             transforms.Lambda(lambda x: torch.tensor([int(i) for i in x], dtype=torch.long)),
         ])
 
-        dataset = AdditionDataset(txt_file='data/addition/addition.txt', label_type=label_type, transform=transform)
+        dataset = AdditionDataset(txt_file='data/addition/addition.txt', label_type=self.label_type, transform=transform)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=num_workers)
 
         return dataloader

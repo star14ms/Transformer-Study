@@ -14,7 +14,7 @@ tokenizer.pre_tokenizer = Split(pattern="", behavior="isolated")
 # make exception that doesn't tokenize
 tokenizer.add_special_tokens(["\n", " "])
 
-trainer = BpeTrainer(special_tokens=["[UNK]", "[PAD]", "[UNK]"], min_frequency=1)
+trainer = BpeTrainer(special_tokens=["[UNK]", "[PAD]", "[SOS]", "[EOS]"], min_frequency=1)
 with open("data/addition/addition.txt", "r") as f:
     data = (line.replace("_", "") for line in f.readlines())
 tokenizer.train_from_iterator(data, trainer)

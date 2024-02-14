@@ -63,16 +63,18 @@ class Transformer(nn.Module):
     def __init__(self, vocab_size, d_model=512, nhead=8, num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=2048, batch_first=False):
         super(Transformer, self).__init__()
         self.pos_encoding = PositionalEncoding(d_model, max_len=7)
+        self.pos_encoding_tgt = PositionalEncoding(d_model, max_len=5)
         self.embbeding = nn.Embedding(vocab_size, d_model)
         self.transformer = nn.Transformer(d_model=d_model, nhead=nhead, num_encoder_layers=num_encoder_layers, num_decoder_layers=num_decoder_layers, dim_feedforward=dim_feedforward, batch_first=batch_first)
         self.linear = nn.Linear(d_model, vocab_size)
 
-    def forward(self, x, tgt):
+
+    def forward(self, x, tgt, **kwargs):
         x = self.embbeding(x)
         x = self.pos_encoding(x)
         tgt = self.embbeding(tgt)
-        tgt = self.pos_encoding(tgt)
-        x = self.transformer(x, tgt)
+        tgt = self.pos_encoding_tgt(tgt)
+        x = self.transformer(x, tgt, **kwargs)
         x = self.linear(x)
 
         return x
@@ -84,7 +86,7 @@ class TransformerEncoder(nn.Module):
         self.pos_encoding = PositionalEncoding(d_model, max_len=7)
         self.embbeding = nn.Embedding(vocab_size, d_model)
         self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=batch_first)
-        self.transformer = nn.TransformerEncoder(encoder_layer=self.encoder_layer, num_layers=num_layers)
+        self.encoder = nn.TransformerEncoder(encoder_layer=self.encoder_layer, num_layers=num_layers)
         
         self.ffn = nn.Sequential(
             nn.Linear(d_model*7, 16),
@@ -95,7 +97,7 @@ class TransformerEncoder(nn.Module):
     def forward(self, x):
         x = self.embbeding(x)
         h = self.pos_encoding(x)
-        h = self.transformer(h)
+        h = self.encoder(h)
         h = x + h
         h = h.view(h.shape[0], -1)
         h = self.ffn(h)
