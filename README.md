@@ -1,4 +1,4 @@
-# Study Transformer
+# Transformer Study
 
 Study of Transformer Architecture
 
