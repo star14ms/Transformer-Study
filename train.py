@@ -4,7 +4,7 @@ from model_lighting import AdditionTransformerEncoderL, AdditionTransformerL # c
 from data.addition import AdditionDataModule
 
 
-model = AdditionTransformerL() # change the model
+model = AdditionTransformerEncoderL() # change the model
 label_type = 'int' if model.__class__.__name__ == 'AdditionTransformerEncoderL' else 'string'
 
 dataloader = AdditionDataModule(batch_size=128, label_type=label_type)
