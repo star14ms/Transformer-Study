@@ -49,7 +49,7 @@ if __name__ == '__main__':
     datamodule = AdditionDataModule(batch_size=BATCH_SIZE, label_type=label_type)
     dataloader = datamodule.train_dataloader()
 
-    model.load_state_dict(torch.load('models/model_encoder.pth'))
+    model.load_state_dict(torch.load('models/model.pth'))
     device = get_device()
     model.to(device)
 
