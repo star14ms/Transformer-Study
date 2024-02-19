@@ -58,12 +58,11 @@
     "continuing_subword_prefix": null,
     "end_of_word_suffix": null,
     "fuse_unk": false,
-    "byte_fallback": false,
     "vocab": {
       "\n": 0,
       "[UNK]": 0,
-      "[PAD]": 1,
       " ": 1,
+      "[PAD]": 1,
       "[SOS]": 2,
       "[EOS]": 3,
       "+": 6,

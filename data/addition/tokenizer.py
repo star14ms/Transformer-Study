@@ -39,4 +39,12 @@ with open("data/addition/vocab.json", "w") as f:
 
 # save the tokenizer
 tokenizer.save("data/addition/tokenizer.json")
+
+# convert tokenizer.json (model.vocab)
+tokenizer = json.load(open("data/addition/tokenizer.json"))
+tokenizer['model']['vocab'] = vocab
+
+with open("data/addition/tokenizer.json", "w") as f:
+    json.dump(tokenizer, f, indent=2)
+
 tokenizer = Tokenizer.from_file("data/addition/tokenizer.json")
