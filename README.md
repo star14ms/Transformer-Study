@@ -33,6 +33,8 @@ python test.py
 1. [addition](data/addition/addition.txt)
 2. [date](data/date/date.txt)
 
+- format: `[input]_[output]`
+
 ### 1. data/addition/addition.txt
 ```txt
 16+75  _91  
