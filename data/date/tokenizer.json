@@ -1,0 +1,106 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [
+    {
+      "id": 0,
+      "content": "[UNK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 1,
+      "content": "[PAD]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 2,
+      "content": "[SOS]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 3,
+      "content": "[EOS]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    }
+  ],
+  "normalizer": null,
+  "pre_tokenizer": {
+    "type": "Split",
+    "pattern": {
+      "String": ""
+    },
+    "behavior": "Isolated",
+    "invert": false
+  },
+  "post_processor": null,
+  "decoder": null,
+  "model": {
+    "type": "BPE",
+    "dropout": null,
+    "unk_token": "[UNK]",
+    "continuing_subword_prefix": null,
+    "end_of_word_suffix": null,
+    "fuse_unk": false,
+    "vocab": {
+      "[UNK]": 0,
+      "\n": 0,
+      "[PAD]": 1,
+      " ": 1,
+      "[SOS]": 2,
+      "[EOS]": 3,
+      ",": 6,
+      "-": 7,
+      "/": 8,
+      "0": 9,
+      "1": 10,
+      "2": 11,
+      "3": 12,
+      "4": 13,
+      "5": 14,
+      "6": 15,
+      "7": 16,
+      "8": 17,
+      "9": 18,
+      "a": 19,
+      "b": 20,
+      "c": 21,
+      "d": 22,
+      "e": 23,
+      "f": 24,
+      "g": 25,
+      "h": 26,
+      "i": 27,
+      "j": 28,
+      "l": 29,
+      "m": 30,
+      "n": 31,
+      "o": 32,
+      "p": 33,
+      "r": 34,
+      "s": 35,
+      "t": 36,
+      "u": 37,
+      "v": 38,
+      "w": 39,
+      "y": 40
+    },
+    "merges": []
+  }
+}
