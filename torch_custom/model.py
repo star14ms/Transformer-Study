@@ -102,7 +102,7 @@ class TransformerEncoderLayer(nn.Module):
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation: Union[str, Callable[[Tensor], Tensor]] = F.relu,
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False,
-                 bias: bool = True, device=None, dtype=None) -> None:
+                 bias: bool = True, device=None, dtype=None, residual=True) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout,
@@ -132,6 +132,8 @@ class TransformerEncoderLayer(nn.Module):
         else:
             self.activation_relu_or_gelu = 0
         self.activation = activation
+        self.residual = residual
+        self.attn_weight = None
 
     def __setstate__(self, state):
         super().__setstate__(state)
@@ -256,21 +258,30 @@ class TransformerEncoderLayer(nn.Module):
 
         x = src
         if self.norm_first:
-            x = x + self._sa_block(self.norm1(x), src_mask, src_key_padding_mask, is_causal=is_causal)
-            x = x + self._ff_block(self.norm2(x))
+            if self.residual:
+                x = x + self._sa_block(self.norm1(x), src_mask, src_key_padding_mask, is_causal=is_causal)
+                x = x + self._ff_block(self.norm2(x))
+            else:
+                x = self._sa_block(self.norm1(x), src_mask, src_key_padding_mask, is_causal=is_causal)
+                x = self._ff_block(self.norm2(x))
         else:
-            x = self.norm1(x + self._sa_block(x, src_mask, src_key_padding_mask, is_causal=is_causal))
-            x = self.norm2(x + self._ff_block(x))
+            if self.residual:
+                x = self.norm1(x + self._sa_block(x, src_mask, src_key_padding_mask, is_causal=is_causal))
+                x = self.norm2(x + self._ff_block(x))
+            else:
+                x = self.norm1(self._sa_block(x, src_mask, src_key_padding_mask, is_causal=is_causal))
+                x = self.norm2(self._ff_block(x))
 
         return x
 
     # self-attention block
     def _sa_block(self, x: Tensor,
                   attn_mask: Optional[Tensor], key_padding_mask: Optional[Tensor], is_causal: bool = False) -> Tensor:
-        x = self.self_attn(x, x, x,
+        x, attn_weight = self.self_attn(x, x, x,
                            attn_mask=attn_mask,
                            key_padding_mask=key_padding_mask,
-                           need_weights=False, is_causal=is_causal)[0]
+                           need_weights=False, is_causal=is_causal)
+        self.attn_weight = attn_weight
         return self.dropout1(x)
 
     # feed forward block
@@ -322,7 +333,7 @@ class TransformerDecoderLayer(nn.Module):
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation: Union[str, Callable[[Tensor], Tensor]] = F.relu,
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False,
-                 bias: bool = True, device=None, dtype=None) -> None:
+                 bias: bool = True, device=None, dtype=None, residual=True) -> None:
         factory_kwargs = {'device': device, 'dtype': dtype}
         super().__init__()
         self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout, batch_first=batch_first,
@@ -347,6 +358,8 @@ class TransformerDecoderLayer(nn.Module):
             self.activation = _get_activation_fn(activation)
         else:
             self.activation = activation
+        self.residual = residual
+        self.attn_weight = None
 
     def __setstate__(self, state):
         if 'activation' not in state:
@@ -396,24 +409,35 @@ class TransformerDecoderLayer(nn.Module):
 
         x = tgt
         if self.norm_first:
-            x = x + self._sa_block(self.norm1(x), tgt_mask, tgt_key_padding_mask, tgt_is_causal)
-            x = x + self._mha_block(self.norm2(x), memory, memory_mask, memory_key_padding_mask, memory_is_causal)
-            x = x + self._ff_block(self.norm3(x))
+            if self.residual:
+                x = x + self._sa_block(self.norm1(x), tgt_mask, tgt_key_padding_mask, tgt_is_causal)
+                x = x + self._mha_block(self.norm2(x), memory, memory_mask, memory_key_padding_mask, memory_is_causal)
+                x = x + self._ff_block(self.norm3(x))
+            else:
+                x = self._sa_block(self.norm1(x), tgt_mask, tgt_key_padding_mask, tgt_is_causal)
+                x = self._mha_block(self.norm2(x), memory, memory_mask, memory_key_padding_mask, memory_is_causal)
+                x = self._ff_block(self.norm3(x))
         else:
-            x = self.norm1(x + self._sa_block(x, tgt_mask, tgt_key_padding_mask, tgt_is_causal))
-            x = self.norm2(x + self._mha_block(x, memory, memory_mask, memory_key_padding_mask, memory_is_causal))
-            x = self.norm3(x + self._ff_block(x))
+            if self.residual:
+                x = self.norm1(x + self._sa_block(x, tgt_mask, tgt_key_padding_mask, tgt_is_causal))
+                x = self.norm2(x + self._mha_block(x, memory, memory_mask, memory_key_padding_mask, memory_is_causal))
+                x = self.norm3(x + self._ff_block(x))
+            else:
+                x = self.norm1(self._sa_block(x, tgt_mask, tgt_key_padding_mask, tgt_is_causal))
+                x = self.norm2(self._mha_block(x, memory, memory_mask, memory_key_padding_mask, memory_is_causal))
+                x = self.norm3(self._ff_block(x))
 
         return x
 
     # self-attention block
     def _sa_block(self, x: Tensor,
                   attn_mask: Optional[Tensor], key_padding_mask: Optional[Tensor], is_causal: bool = False) -> Tensor:
-        x = self.self_attn(x, x, x,
+        x, attn_weight = self.self_attn(x, x, x,
                            attn_mask=attn_mask,
                            key_padding_mask=key_padding_mask,
                            is_causal=is_causal,
-                           need_weights=False)[0]
+                           need_weights=False)
+        self.attn_weight = attn_weight
         return self.dropout1(x)
 
     # multihead attention block
@@ -997,7 +1021,7 @@ def multi_head_attention_forward(
         k = k.view(bsz, num_heads, src_len, head_dim)
         v = v.view(bsz, num_heads, src_len, head_dim)
 
-        attn_output = _scaled_dot_product_attention(q, k, v, attn_mask, dropout_p, is_causal)
+        attn_output, attn_weight = _scaled_dot_product_attention(q, k, v, attn_mask, dropout_p, is_causal)
         attn_output = attn_output.permute(2, 0, 1, 3).contiguous().view(bsz * tgt_len, embed_dim)
 
         attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
@@ -1005,14 +1029,14 @@ def multi_head_attention_forward(
         if not is_batched:
             # squeeze the output if input was unbatched
             attn_output = attn_output.squeeze(1)
-        return attn_output, None
+        return attn_output, attn_weight
 
 
 def _scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None) -> torch.Tensor:
     # Efficient implementation equivalent to the following:
     L, S = query.size(-2), key.size(-2)
     scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
-    attn_bias = torch.zeros(L, S, dtype=query.dtype)
+    attn_bias = torch.zeros(L, S, dtype=query.dtype, device=query.device)
     if is_causal:
         assert attn_mask is None
         temp_mask = torch.ones(L, S, dtype=torch.bool).tril(diagonal=0)
@@ -1028,4 +1052,4 @@ def _scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0
     attn_weight += attn_bias
     attn_weight = torch.softmax(attn_weight, dim=-1)
     attn_weight = torch.dropout(attn_weight, dropout_p, train=True)
-    return attn_weight @ value
+    return attn_weight @ value, attn_weight

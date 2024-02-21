@@ -1,6 +1,8 @@
 from torch import nn
 import math
 import torch
+from torch_custom.model import TransformerEncoderLayer, TransformerDecoderLayer
+
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, dropout=0.1, max_len=5000):
@@ -21,28 +23,7 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:, :x.shape[1]]
 
         return self.dropout(x)
-    
 
-class MNISTTransformerEncoder(nn.Module):
-    def __init__(self, d_model=512, nhead=8, num_layers=2, num_classes=10):
-        super().__init__()
-
-        self.conv1 = nn.Conv2d(1, 16, 3, 1)
-        self.conv2 = nn.Conv2d(16, 32, 3, 1)
-        self.encoderlayer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead)
-        self.encoder = nn.TransformerEncoder(self.encoderlayer, num_layers=num_layers, norm=nn.LayerNorm(d_model))
-        self.ffn = nn.Linear(18432, num_classes)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        # x = x.view(x.shape[0], x.shape[1], -1)
-        # x = self.encoder(x)
-        x = x.view(x.shape[0], -1)
-        x = self.ffn(x)
-
-        return x.view(x.shape[0], -1)
-    
 
 class AdditionTransformer(nn.Module):
     def __init__(self, vocab_size, d_model=512, nhead=8, num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=2048, batch_first=False):
@@ -65,12 +46,68 @@ class AdditionTransformer(nn.Module):
         return x
 
 
+class AdditionTransformerV2(nn.Module):
+    def __init__(self, vocab_size, d_model=512, nhead=8, num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=2048, batch_first=False, residual=True):
+        super().__init__()
+        self.pos_encoding = PositionalEncoding(d_model, max_len=7)
+        self.pos_encoding_tgt = PositionalEncoding(d_model, max_len=5)
+        self.embbeding = nn.Embedding(vocab_size, d_model)
+        self.encoder = nn.TransformerEncoder(
+            TransformerEncoderLayer(
+                d_model=d_model, 
+                nhead=nhead, 
+                dim_feedforward=dim_feedforward, 
+                batch_first=batch_first,
+                residual=residual
+            )
+        , num_layers=num_encoder_layers)
+        self.decoder = nn.TransformerDecoder(
+            TransformerDecoderLayer(
+                d_model=d_model, 
+                nhead=nhead, 
+                dim_feedforward=dim_feedforward, 
+                batch_first=batch_first,
+                residual=residual
+            )
+        , num_layers=num_decoder_layers)
+        self.linear = nn.Linear(d_model, vocab_size)
+
+
+    def forward(self, x, tgt, **kwargs):
+        def _get_encoder_kwargs(kwargs: dict):
+            return {
+                'mask': kwargs.get('src_mask'),
+                'src_key_padding_mask': kwargs.get('src_key_padding_mask'),
+                'is_causal': kwargs.get('src_is_causal', False),
+            }
+
+        def _get_decoder_kwargs(kwargs: dict):
+            return {
+                'tgt_mask': kwargs.get('tgt_mask'),
+                'memory_mask': kwargs.get('memory_mask'),
+                'tgt_key_padding_mask': kwargs.get('tgt_key_padding_mask'),
+                'memory_key_padding_mask': kwargs.get('memory_key_padding_mask'),
+                'tgt_is_causal': kwargs.get('tgt_is_causal', False),
+                'memory_is_causal': kwargs.get('memory_is_causal', False),
+            }
+        
+        x = self.embbeding(x)
+        x = self.pos_encoding(x)
+        tgt = self.embbeding(tgt)
+        tgt = self.pos_encoding_tgt(tgt)
+        memory = self.encoder(x, **_get_encoder_kwargs(kwargs))
+        x = self.decoder(tgt, memory, **_get_decoder_kwargs(kwargs))
+        x = self.linear(x)
+
+        return x
+
+
 class AdditionTransformerEncoder(nn.Module):
     def __init__(self, vocab_size, d_model=512, nhead=8, num_layers=6, dim_feedforward=2048, batch_first=False):
         super().__init__()
         self.pos_encoding = PositionalEncoding(d_model, max_len=7)
         self.embbeding = nn.Embedding(vocab_size, d_model)
-        self.encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=batch_first)
+        self.encoder_layer = TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, batch_first=batch_first)
         self.encoder = nn.TransformerEncoder(encoder_layer=self.encoder_layer, num_layers=num_layers)
         
         self.ffn = nn.Sequential(
@@ -79,11 +116,17 @@ class AdditionTransformerEncoder(nn.Module):
             nn.Linear(16, 1),
         )
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
+        def _get_encoder_kwargs(kwargs: dict):
+            return {
+                'mask': kwargs.get('src_mask'),
+                'src_key_padding_mask': kwargs.get('src_key_padding_mask'),
+                'is_causal': kwargs.get('src_is_causal', False),
+            }
+
         x = self.embbeding(x)
         h = self.pos_encoding(x)
-        h = self.encoder(h)
-        h = x + h
+        h = self.encoder(h, **_get_encoder_kwargs(kwargs))
         h = h.view(h.shape[0], -1)
         h = self.ffn(h)
 
