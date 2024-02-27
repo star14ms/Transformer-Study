@@ -16,6 +16,7 @@ class DateDataset(Dataset):
         self.max_length = max_length
         self.SOS_ID = tokenizer.token_to_id('[SOS]')
         self.EOS_ID = tokenizer.token_to_id('[EOS]')
+        self.PAD_ID = tokenizer.token_to_id('[PAD]')
 
     def __len__(self):
         return len(self.data)
@@ -24,8 +25,9 @@ class DateDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        inputs, labels = self.data[idx].split('_')
-        inputs = tokenizer.encode(inputs).ids
+        inputs, labels = self.data[idx].lower().split('_')
+        inputs = tokenizer.encode(inputs.rstrip()).ids
+        inputs = inputs + [self.PAD_ID] * (self.max_length - len(inputs))
         labels = tokenizer.encode(labels.replace('\n', '')).ids
         labels_shift = [self.SOS_ID] + labels
         labels = labels + [self.EOS_ID]
@@ -65,6 +67,8 @@ if __name__ == '__main__':
     for i, data in enumerate(dataloader):
         inputs, _, labels = data
         print(inputs.shape, labels.shape)
-        print(tokenizer.decode(inputs[0].tolist()).replace(' ', ''))
-        print(tokenizer.decode(labels[0].tolist()).replace(' ', ''))
+        print(inputs[0])
+        print(labels[0])
+        print(tokenizer.decode(inputs[0].tolist()).replace('   ', '[]').replace(' ', '').replace('[]', ' '))
+        print(tokenizer.decode(labels[0].tolist()).replace('   ', '[]').replace(' ', '').replace('[]', ' '))
         break

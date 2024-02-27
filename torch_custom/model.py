@@ -134,6 +134,7 @@ class TransformerEncoderLayer(nn.Module):
         self.activation = activation
         self.residual = residual
         self.attn_weight = None
+        self.attn_weight_sum = None
 
     def __setstate__(self, state):
         super().__setstate__(state)
@@ -282,6 +283,7 @@ class TransformerEncoderLayer(nn.Module):
                            key_padding_mask=key_padding_mask,
                            need_weights=False, is_causal=is_causal)
         self.attn_weight = attn_weight
+        self.attn_weight_sum = x
         return self.dropout1(x)
 
     # feed forward block
@@ -360,6 +362,7 @@ class TransformerDecoderLayer(nn.Module):
             self.activation = activation
         self.residual = residual
         self.attn_weight = None
+        self.attn_weight_sum = None
 
     def __setstate__(self, state):
         if 'activation' not in state:
@@ -437,17 +440,18 @@ class TransformerDecoderLayer(nn.Module):
                            key_padding_mask=key_padding_mask,
                            is_causal=is_causal,
                            need_weights=False)
-        self.attn_weight = attn_weight
         return self.dropout1(x)
 
     # multihead attention block
     def _mha_block(self, x: Tensor, mem: Tensor,
                    attn_mask: Optional[Tensor], key_padding_mask: Optional[Tensor], is_causal: bool = False) -> Tensor:
-        x = self.multihead_attn(x, mem, mem,
+        x, attn_weight = self.multihead_attn(x, mem, mem,
                                 attn_mask=attn_mask,
                                 key_padding_mask=key_padding_mask,
                                 is_causal=is_causal,
-                                need_weights=False)[0]
+                                need_weights=False)
+        self.attn_weight = attn_weight
+        self.attn_weight_sum = x
         return self.dropout2(x)
 
     # feed forward block
@@ -1039,7 +1043,7 @@ def _scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0
     attn_bias = torch.zeros(L, S, dtype=query.dtype, device=query.device)
     if is_causal:
         assert attn_mask is None
-        temp_mask = torch.ones(L, S, dtype=torch.bool).tril(diagonal=0)
+        temp_mask = torch.ones(L, S, dtype=torch.bool, device=query.device).tril(diagonal=0)
         attn_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
         attn_bias.to(query.dtype)
 
@@ -1047,7 +1051,7 @@ def _scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0
         if attn_mask.dtype == torch.bool:
             attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
         else:
-            attn_bias += attn_mask
+            attn_bias += attn_mask[0][0]
     attn_weight = query @ key.transpose(-2, -1) * scale_factor
     attn_weight += attn_bias
     attn_weight = torch.softmax(attn_weight, dim=-1)

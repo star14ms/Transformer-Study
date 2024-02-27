@@ -7,7 +7,7 @@ from data.addition import tokenizer, vocab
 
 
 class AdditionTransformerEncoderL(pl.LightningModule):
-    def __init__(self, vocab_size=len(vocab), d_model=128, nhead=32, num_layers=2, dim_feedforward=32, batch_first=True, *args, **kwargs):
+    def __init__(self, vocab_size=len(vocab), d_model=64, nhead=16, num_layers=2, dim_feedforward=32, batch_first=True, *args, **kwargs):
         super().__init__()
         self.model = AdditionTransformerEncoder(vocab_size=vocab_size, d_model=d_model, nhead=nhead, num_layers=num_layers, dim_feedforward=dim_feedforward, batch_first=batch_first)
         self.PAD_ID = tokenizer.token_to_id('[PAD]')
@@ -23,7 +23,7 @@ class AdditionTransformerEncoderL(pl.LightningModule):
 
         kwargs = {
             # 'mask': self.src_mask.to(self.device),
-            'src_key_padding_mask': (inputs == self.PAD_ID).to(torch.float32).to(self.device),
+            # 'src_key_padding_mask': (inputs == self.PAD_ID).to(torch.float32).to(self.device),
             # 'is_causal': True,
         }
 
@@ -84,7 +84,7 @@ class AdditionTransformerL(pl.LightningModule):
     
 
 class DateTransformerL(pl.LightningModule):
-    def __init__(self, vocab_size=len(vocab), d_model=128, nhead=8, num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=512, batch_first=True, *args, **kwargs):
+    def __init__(self, vocab_size=len(vocab), d_model=64, nhead=8, num_encoder_layers=1, num_decoder_layers=1, dim_feedforward=256, batch_first=True, *args, **kwargs):
         super().__init__()
         self.model = DateTransformer(vocab_size=vocab_size, d_model=d_model, nhead=nhead, num_encoder_layers=num_encoder_layers, num_decoder_layers=num_decoder_layers, dim_feedforward=dim_feedforward, batch_first=batch_first)
         self.criterion = nn.CrossEntropyLoss()
@@ -109,10 +109,10 @@ class DateTransformerL(pl.LightningModule):
             'tgt_mask': self.tgt_mask.to(self.device),
             # 'memory_mask': self.memory_mask.to(self.device),
             'src_key_padding_mask': (inputs == self.PAD_ID).to(torch.float32).to(self.device),
-            'tgt_key_padding_mask': (labels == self.PAD_ID).to(torch.float32).to(self.device),
+            # 'tgt_key_padding_mask': (labels == self.PAD_ID).to(torch.float32).to(self.device),
             # 'memory_key_padding_mask': (inputs == self.PAD_ID).to(torch.float32).to(self.device),
-            # 'tgt_is_causal': True,
             # 'src_is_causal': True,
+            'tgt_is_causal': True,
             # 'memory_is_causal': True,
         }
 

@@ -159,16 +159,49 @@ class DateTransformer(nn.Module):
         self.pos_encoding = PositionalEncoding(d_model, max_len=29)
         self.pos_encoding_tgt = PositionalEncoding(d_model, max_len=11)
         self.embbeding = nn.Embedding(vocab_size, d_model)
-        self.transformer = nn.Transformer(d_model=d_model, nhead=nhead, num_encoder_layers=num_encoder_layers, num_decoder_layers=num_decoder_layers, dim_feedforward=dim_feedforward, batch_first=batch_first)
+        self.encoder = nn.TransformerEncoder(
+            TransformerEncoderLayer(
+                d_model=d_model, 
+                nhead=nhead, 
+                dim_feedforward=dim_feedforward, 
+                batch_first=batch_first,
+            )
+        , num_layers=num_encoder_layers)
+        self.decoder = nn.TransformerDecoder(
+            TransformerDecoderLayer(
+                d_model=d_model, 
+                nhead=nhead, 
+                dim_feedforward=dim_feedforward, 
+                batch_first=batch_first,
+            )
+        , num_layers=num_decoder_layers)
         self.linear = nn.Linear(d_model, vocab_size)
 
 
     def forward(self, x, tgt, **kwargs):
+        def _get_encoder_kwargs(kwargs: dict):
+            return {
+                'mask': kwargs.get('src_mask'),
+                'src_key_padding_mask': kwargs.get('src_key_padding_mask'),
+                'is_causal': kwargs.get('src_is_causal', False),
+            }
+
+        def _get_decoder_kwargs(kwargs: dict):
+            return {
+                'tgt_mask': kwargs.get('tgt_mask'),
+                'memory_mask': kwargs.get('memory_mask'),
+                'tgt_key_padding_mask': kwargs.get('tgt_key_padding_mask'),
+                'memory_key_padding_mask': kwargs.get('memory_key_padding_mask'),
+                'tgt_is_causal': kwargs.get('tgt_is_causal', False),
+                'memory_is_causal': kwargs.get('memory_is_causal', False),
+            }
+
         x = self.embbeding(x)
         x = self.pos_encoding(x)
         tgt = self.embbeding(tgt)
         tgt = self.pos_encoding_tgt(tgt)
-        x = self.transformer(x, tgt, **kwargs)
+        memory = self.encoder(x, **_get_encoder_kwargs(kwargs))
+        x = self.decoder(tgt, memory, **_get_decoder_kwargs(kwargs))
         x = self.linear(x)
 
         return x
